@@ -267,6 +267,9 @@ function receivedMessage(event) {
 
   // The whole response has been received. Print out the result.
   resp.on('end', () => {
+  
+    sendTypingOff(senderID);
+    
     var obj = JSON.parse(data)
     console.log(JSON.stringify(obj.items, null, "\t"));
     var index = 1;
@@ -296,13 +299,13 @@ function receivedMessage(event) {
 
   }).on("error", (err) => {
     console.log("Error: " + err.message);
+    sendTypingOff(senderID);
     sendTextMessage(senderID, "Error: " + err.message);
   });
   
-  sendTypingOff(senderID);
 
   } else if (messageAttachments) {
-    sendTextMessage(senderID, "Message with attachment received");
+    sendTextMessage(senderID, "Search the web for free! What you want to search?");
   }
 }
 
