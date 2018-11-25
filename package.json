@@ -1,7 +1,7 @@
 {
-  "name": "messenger-get-started",
+  "name": "FreeWebSearchBot",
   "version": "1.0.0",
-  "description": "Get started example for Messenger Platform",
+  "description": "Simple search engine for people without access to the internet outside the free Facebook network",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/fbsamples/messenger-platform-samples.git"
+    "url": "https://github.com/mikorobyo/FreeWebSearchBot.git"
   },
   "author": "Facebook",
   "license": "ISC",
