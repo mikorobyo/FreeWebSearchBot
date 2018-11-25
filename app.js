@@ -255,6 +255,8 @@ function receivedMessage(event) {
 
   if (messageText) {
   
+  sendTypingOn(senderID);
+  
   https.get(SEARCH_URL + messageText, (resp) => {
   let data = '';
 
@@ -269,18 +271,35 @@ function receivedMessage(event) {
     console.log(JSON.stringify(obj.items, null, "\t"));
     var index = 1;
     var total = "";
+    
+    if(obj.items != null) {
     obj.items.forEach(function(item){
        if (index != 1) {
          total += "\n";
        }
        total += (index++) + ". " + item.snippet;
     });
-    sendTextMessage(senderID, total);
+    if(total.length < 2000) {
+      sendTextMessage(senderID, total);
+    } else {
+    	var parts = total.length / 2000;
+    	var i = 0
+    	for(; i < total.length; i += 2000){
+    	  sendTextMessage(senderID, total.substring(i, i+2000));
+    	}
+    	sendTextMessage(senderID, total.substring(i, total.length));
+    }
+    } else {
+     sendTextMessage(senderID, "No search results for: " + messageText);
+    }
   });
 
   }).on("error", (err) => {
     console.log("Error: " + err.message);
+    sendTextMessage(senderID, "Error: " + err.message);
   });
+  
+  sendTypingOff(senderID);
 
   } else if (messageAttachments) {
     sendTextMessage(senderID, "Message with attachment received");
