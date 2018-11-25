@@ -278,7 +278,7 @@ function receivedMessage(event) {
     if(obj.items != null) {
     obj.items.forEach(function(item){
        if (index != 1) {
-         total += "\n";
+         total += "\n\n";
        }
        total += (index++) + ". " + item.snippet;
     });
