@@ -725,52 +725,52 @@ function sendQuickReply(recipientId, urlArray) {
         {
           "content_type":"text",
           "title":"1",
-          "payload":url[0]
+          "payload":urlArray[0]
         },
         {
           "content_type":"text",
           "title":"2",
-          "payload":url[1]
+          "payload":urlArray[1]
         },
         {
           "content_type":"text",
           "title":"3",
-          "payload":url[2]
+          "payload":urlArray[2]
         },
         {
           "content_type":"text",
           "title":"4",
-          "payload":url[3]
+          "payload":urlArray[3]
         },
         {
           "content_type":"text",
           "title":"5",
-          "payload":url[4]
+          "payload":urlArray[4]
         },
         {
           "content_type":"text",
           "title":"6",
-          "payload":url[5]
+          "payload":urlArray[5]
         },
         {
           "content_type":"text",
           "title":"7",
-          "payload":url[6]
+          "payload":urlArray[6]
         },
         {
           "content_type":"text",
           "title":"8",
-          "payload":url[7]
+          "payload":urlArray[7]
         },
         {
           "content_type":"text",
           "title":"9",
-          "payload":url[8]
+          "payload":urlArray[8]
         },
         {
           "content_type":"text",
           "title":"10",
-          "payload":url[9]
+          "payload":urlArray[9]
         }
       ]
     }
