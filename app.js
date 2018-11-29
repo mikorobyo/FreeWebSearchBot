@@ -281,13 +281,15 @@ function receivedMessage(event) {
     console.log(JSON.stringify(obj.items, null, "\t"));
     var index = 1;
     var total = "";
+    var links = [];
     
     if(obj.items != null) {
     obj.items.forEach(function(item){
        if (index != 1) {
          total += "\n\n";
        }
-       total += (index++) + ". " + item.snippet;
+       total += (index++) + ". " + item.title + "\n\n" + item.snippet;
+       links.push(item.link)
     });
     if(total.length < 2000) {
       sendTextMessage(senderID, total);
@@ -299,8 +301,11 @@ function receivedMessage(event) {
     	}
     	sendTextMessage(senderID, total.substring(i, total.length));
     }
+    
+    sendQuickReply(senderID, links)
+    
     } else {
-     sendTextMessage(senderID, "No search results for: " + messageText);
+      sendTextMessage(senderID, "No search results for: " + messageText);
     }
   });
 
