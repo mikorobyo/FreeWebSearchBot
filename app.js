@@ -902,10 +902,10 @@ function httpGet(senderID, url) {
       } else {
     	var parts = body.length / 2000;
     	var i = 0
-    	for(; i < total.length; i += 2000){
-    	  sendTextMessage(senderID, total.substring(i, i+2000));
+    	for(; i < body.length; i += 2000){
+    	  sendTextMessage(senderID, body.substring(i, i+2000));
     	}
-    	sendTextMessage(senderID, total.substring(i, total.length))
+    	sendTextMessage(senderID, body.substring(i, body.length))
       }
     
       
