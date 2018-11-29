@@ -292,17 +292,15 @@ function receivedMessage(event) {
        links.push(item.link)
     });
     if(total.length < 2000) {
-      sendTextMessage(senderID, total);
+      sendQuickReply(senderID, total, links)
     } else {
     	var parts = total.length / 2000;
     	var i = 0
     	for(; i < total.length; i += 2000){
     	  sendTextMessage(senderID, total.substring(i, i+2000));
     	}
-    	sendTextMessage(senderID, total.substring(i, total.length));
+    	sendQuickReply(senderID, total.substring(i, total.length), links)
     }
-    
-    sendQuickReply(senderID, links)
     
     } else {
       sendTextMessage(senderID, "No search results for: " + messageText);
@@ -714,13 +712,13 @@ function sendReceiptMessage(recipientId) {
  * Send a message with Quick Reply buttons.
  *
  */
-function sendQuickReply(recipientId, urlArray) {
+function sendQuickReply(recipientId, message, urlArray) {
   var messageData = {
     recipient: {
       id: recipientId
     },
     message: {
-      text: "What's your favorite movie genre?",
+      text: message,
       quick_replies: [
         {
           "content_type":"text",
@@ -898,7 +896,19 @@ function httpGet(senderID, url) {
     if (!error && response.statusCode == 200) {
       console.log("httpGet: Successfully received response from: %s",
           url);
-      sendTextMessage(senderID, body)
+          
+      if(body.length < 2000) {
+        sendTextMessage(senderID, body)
+      } else {
+    	var parts = body.length / 2000;
+    	var i = 0
+    	for(; i < total.length; i += 2000){
+    	  sendTextMessage(senderID, total.substring(i, i+2000));
+    	}
+    	sendTextMessage(senderID, total.substring(i, total.length))
+      }
+    
+      
     } else {
       console.error("Failed calling httpGet", response.statusCode, response.statusMessage, body.error);
           
