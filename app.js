@@ -249,13 +249,20 @@ function receivedMessage(event) {
     console.log("Quick reply for message %s with payload %s",
       messageId, quickReplyPayload);
 
-    sendTextMessage(senderID, "Quick reply tapped");
+    httpGet(senderID, quickReplyPayload);
+    
     return;
   }
 
   if (messageText) {
   
   sendTypingOn(senderID);
+  
+  if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
+    httpGet(senderID, messageText);
+  
+    return;
+  }
   
   https.get(SEARCH_URL + messageText, (resp) => {
   let data = '';
@@ -305,7 +312,7 @@ function receivedMessage(event) {
   
 
   } else if (messageAttachments) {
-    sendTextMessage(senderID, "Search the web for free! What you want to search?");
+    sendTextMessage(senderID, "Search the Internet for free! What do you want to search?");
   }
 }
 
@@ -702,7 +709,7 @@ function sendReceiptMessage(recipientId) {
  * Send a message with Quick Reply buttons.
  *
  */
-function sendQuickReply(recipientId) {
+function sendQuickReply(recipientId, urlArray) {
   var messageData = {
     recipient: {
       id: recipientId
@@ -712,18 +719,53 @@ function sendQuickReply(recipientId) {
       quick_replies: [
         {
           "content_type":"text",
-          "title":"Action",
-          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_ACTION"
+          "title":"1",
+          "payload":url[0]
         },
         {
           "content_type":"text",
-          "title":"Comedy",
-          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_COMEDY"
+          "title":"2",
+          "payload":url[1]
         },
         {
           "content_type":"text",
-          "title":"Drama",
-          "payload":"DEVELOPER_DEFINED_PAYLOAD_FOR_PICKING_DRAMA"
+          "title":"3",
+          "payload":url[2]
+        },
+        {
+          "content_type":"text",
+          "title":"4",
+          "payload":url[3]
+        },
+        {
+          "content_type":"text",
+          "title":"5",
+          "payload":url[4]
+        },
+        {
+          "content_type":"text",
+          "title":"6",
+          "payload":url[5]
+        },
+        {
+          "content_type":"text",
+          "title":"7",
+          "payload":url[6]
+        },
+        {
+          "content_type":"text",
+          "title":"8",
+          "payload":url[7]
+        },
+        {
+          "content_type":"text",
+          "title":"9",
+          "payload":url[8]
+        },
+        {
+          "content_type":"text",
+          "title":"10",
+          "payload":url[9]
         }
       ]
     }
@@ -840,24 +882,25 @@ function callSendAPI(messageData) {
   });
 }
 
-function httpGetAsync(theUrl, callback)
-{
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function() { 
-        if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-            callback(xmlHttp.responseText);
+
+function httpGet(senderID, url) {
+  console.log("httpGet: Fetching: %s", url);
+  request({
+    uri: url,
+    method: 'GET'
+
+  }, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      console.log("httpGet: Successfully received response from: %s",
+          url);
+      sendTextMessage(senderID, body)
+    } else {
+      console.error("Failed calling httpGet", response.statusCode, response.statusMessage, body.error);
+          
     }
-    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
-    xmlHttp.send(null);
+  });
 }
 
-function httpGet(theUrl)
-{
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.open( "GET", theUrl, false ); // false for synchronous request
-    xmlHttp.send( null );
-    return xmlHttp.responseText;
-}
 
 // Start server
 // Webhooks must be available via SSL with a certificate signed by a valid
