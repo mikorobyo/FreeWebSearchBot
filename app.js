@@ -299,9 +299,9 @@ function receivedMessage(event) {
     	var parts = total.length / 2000;
     	var i = 0
     	for(; i < total.length; i += 2000){
-    	  setTimeout(function(){sendTextMessage(senderID, total.substring(i, i+2000))}, 500);
+    	  sendTextMessage(senderID, total.substring(i, i+2000));
     	}
-    	setTimeout(function(){sendQuickReply(senderID, total.substring(i, total.length), links)}, 500);
+    	sendQuickReply(senderID, total.substring(i, total.length), links)
     }
     
     } else {
