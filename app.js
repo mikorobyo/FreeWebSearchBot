@@ -897,15 +897,22 @@ function httpGet(senderID, url) {
       console.log("httpGet: Successfully received response from: %s",
           url);
           
-      if(body.length < 2000) {
-        sendTextMessage(senderID, body)
+      var div = document.createElement("div");
+      div.innerHTML = body;
+      var text = div.textContent || div.innerText || "";
+          
+      if(text.length < 2000) {
+        sendTextMessage(senderID, text)
       } else {
-    	var parts = body.length / 2000;
-    	var i = 0
-    	for(; i < body.length; i += 2000){
-    	  sendTextMessage(senderID, body.substring(i, i+2000));
-    	}
-    	sendTextMessage(senderID, body.substring(i, body.length))
+      	 sendTextMessage(senderID, text.substring(0, 2000));
+      	 
+      	 // TODO: manage message barrage
+//     	var parts = text.length / 2000;
+//     	var i = 0
+//     	for(; i < text.length; i += 2000){
+//     	  sendTextMessage(senderID, text.substring(i, i+2000));
+//     	}
+//     	sendTextMessage(senderID, text.substring(i, text.length))
       }
     
       
