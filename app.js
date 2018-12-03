@@ -17,6 +17,8 @@ const
   express = require('express'),
   https = require('https'),
   request = require('request');
+  sanitizeHtml = require('sanitize-html');
+
 
 var app = express();
 app.set('port', process.env.PORT || 5000);
@@ -897,10 +899,12 @@ function httpGet(senderID, url) {
       console.log("httpGet: Successfully received response from: %s",
           url);
           
-      var div = document.createElement("div");
-      div.innerHTML = body;
-      var text = div.textContent || div.innerText || "";
-          
+        var text  = sanitizeHtml(dirty, {
+ 		 allowedTags: [ ],
+  		 allowedAttributes: { },
+ 		 allowedIframeHostnames: [ ]
+		});
+         
       if(text.length < 2000) {
         sendTextMessage(senderID, text)
       } else {
