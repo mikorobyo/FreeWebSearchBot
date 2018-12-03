@@ -899,7 +899,7 @@ function httpGet(senderID, url) {
       console.log("httpGet: Successfully received response from: %s",
           url);
           
-        var text  = sanitizeHtml(dirty, {
+        var text  = sanitizeHtml(body, {
  		 allowedTags: [ ],
   		 allowedAttributes: { },
  		 allowedIframeHostnames: [ ]
