@@ -299,13 +299,13 @@ async function receivedMessage(event) {
 					}
 
 				} catch (e) {
-					console.err("Error: " + e.message);
+					console.error("Error: " + e.message);
 					await sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
 				}
 			});
 
 		}).on("error", async (err) => {
-			console.err("Error: " + err.message);
+			console.error("Error: " + err.message);
 			sendTypingOff(senderID);
 			await sendTextMessage(senderID, "Error: " + err.message);
 		});
@@ -447,9 +447,7 @@ async function httpGet(senderID, url) {
 
 
 		} else {
-			console.error("Failed calling httpGet from: %s",
-				url);
-
+			console.error("Failed calling httpGet from: %s", url);
 		}
 	});
 }
