@@ -228,7 +228,7 @@ async function receivedMessage(event) {
 		console.log("Received echo for message %s and app %d with metadata %s", messageId, appId, metadata);
 		return;
 	} else if (quickReply) {
-		console.log("Quick reply for message %s with payload %s", messageId, quickReplyPayload);
+		console.log("Quick reply for message %s with payload %s", messageId, quickReply.payload);
 
 		await sendTypingIndicator(senderID, true);
 		await httpGet(senderID, quickReply.payload);
