@@ -20,6 +20,7 @@ const
 	express = require('express'),
 	https = require('https'),
 	request = require('request'),
+	rp = require('request-promise'),
 	sanitizeHtml = require('sanitize-html');
 
 
