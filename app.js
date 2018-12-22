@@ -242,75 +242,43 @@ async function receivedMessage(event) {
 
 		if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
 			httpGet(senderID, messageText);
-
 			return;
 		}
 
-		https.get(SEARCH_URL + messageText, async (resp) => {
-			let data = '';
+		try {
+			await sendTypingIndicator(senderID, true);
 
-			// A chunk of data has been received.
-			resp.on('data', (chunk) => {
-				data += chunk;
+			const obj = await rp.get({
+				uri: SEARCH_URL + messageText,
+				json: true
 			});
 
-			// The whole response has been received. Print out the result.
-			resp.on('end', async () => {
-                console.log(data);
+			let index = 1,
+				total = "",
+				links = [];
 
-				await sendTypingIndicator(senderID, false);
+			if(!obj.items) {
+				console.log("Googled " + messageText + ": ZERO results");
+				await sendTextMessage(senderID, "Thanks for trying out this bot. Please bear with us as we already exceeded the total daily number of searches allowable by Google (by a single app). The bot will work again at 4 p.m. Philippine time when Google resets the daily limit.\n\nIn the meantime, you may also use this as a primitive web browser. Just send a link (e.g. \"http://phmountains.com\") and the bot will respond with the text-only version of the website.");
+				return;
+			}
 
-				try {
-					var obj = JSON.parse(data);
-					//     console.log(JSON.stringify(obj.items, null, "\t"));
-					var index = 1;
-					var total = "";
-					var links = [];
+			obj.items.forEach(function (item) {
+				if (index != 1) total += "\n\n";
 
-					if (obj.items != null) {
-						obj.items.forEach(function (item) {
-							if (index != 1) {
-								total += "\n\n";
-							}
-							total += (index++) + ". " + item.title + "\n\n" + item.snippet;
-							links.push(item.link);
-
-						});
-						console.log("Googled " + messageText + ": " + obj.items.length + " results");
-
-
-						if (total.length < 2000) { // FB single message length limit
-							sendQuickReply(senderID, total, links);
-						} else {
-							sendQuickReply(senderID, total.substring(0, 2000), links);
-
-							// TODO: manage message barrage order
-							//   	var parts = total.length / 2000;
-							//     	var i = 0
-							//     	for(; i < total.length; i += 2000){
-							//     	  sendTextMessage(senderID, total.substring(i, i+2000));
-							//     	}
-							//     	sendQuickReply(senderID, total.substring(i, total.length), links);
-						}
-
-					} else {
-					    console.log("Googled " + messageText + ": ZERO results");
-						await sendTextMessage(senderID, "Thanks for trying out this bot. Please bear with us as we already exceeded the total daily number of searches allowable by Google (by a single app). The bot will work again at 4 p.m. Philippine time when Google resets the daily limit.\n\nIn the meantime, you may also use this as a primitive web browser. Just send a link (e.g. \"http://phmountains.com\") and the bot will respond with the text-only version of the website.");
-					}
-
-				} catch (e) {
-					console.error("Error: " + e.message);
-					await sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
-				}
+				total += (index++) + ". " + item.title + "\n\n" + item.snippet;
+				links.push(item.link);
 			});
 
-		}).on("error", async (err) => {
+			console.log("Googled " + messageText + ": " + obj.items.length + " results");
+
+			await sendTextMessage(senderID, total);
+			await sendQuickReply(senderID, "Choose a search result:", links);
+		} catch(err) {
 			console.error("Error: " + err.message);
-			await sendTextMessage(senderID, "Error: " + err.message);
+			await sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
 			await sendTypingIndicator(senderID, false);
-		});
-
-
+		}
 	} else if (messageAttachments) {
 		await sendTextMessage(senderID, "Search the Internet for free! You may also get the text contents of a website by sending us the complete http link (e.g. \"https://phmountains.com\").");
 	}
@@ -402,28 +370,12 @@ async function httpGet(senderID, url) {
 				allowedIframeHostnames: []
 			});
 
-
-			if (text.length < 2000) { // FB single message length limit
-				await sendTextMessage(senderID, text);
-			} else {
-				await sendTextMessage(senderID, text.substring(0, 2000));
-
-				// TODO: manage message barrage order
-				//     	var parts = text.length / 2000;
-				//     	var i = 0
-				//     	for(; i < text.length; i += 2000){
-				//     	  sendTextMessage(senderID, text.substring(i, i+2000));
-				//     	}
-				//     	sendTextMessage(senderID, text.substring(i, text.length));
-			}
-
-
+			await sendTextMessage(senderID, text);
 		} else {
 			console.error("Failed calling httpGet from: %s", url);
 		}
 	});
 }
-
 
 // Start server
 // Webhooks must be available via SSL with a certificate signed by a valid
