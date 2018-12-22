@@ -238,7 +238,7 @@ async function receivedMessage(event) {
 	}
 
 	if (messageText) {
-		sendTypingOn(senderID);
+		await sendTypingIndicator(senderID, true);
 
 		if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
 			httpGet(senderID, messageText);
@@ -258,7 +258,7 @@ async function receivedMessage(event) {
 			resp.on('end', async () => {
                 console.log(data);
 
-				sendTypingOff(senderID);
+				await sendTypingIndicator(senderID, false);
 
 				try {
 					var obj = JSON.parse(data);
@@ -306,8 +306,8 @@ async function receivedMessage(event) {
 
 		}).on("error", async (err) => {
 			console.error("Error: " + err.message);
-			sendTypingOff(senderID);
 			await sendTextMessage(senderID, "Error: " + err.message);
+			await sendTypingIndicator(senderID, false);
 		});
 
 
@@ -358,32 +358,12 @@ async function sendQuickReply(recipientId, message, urlArray) {
 	return await callSendAPI(recipientId, messageData);
 }
 
-/*
- * Turn typing indicator on
- *
- */
-async function sendTypingOn(recipientId) {
-	console.log("Turning typing indicator on");
+async function sendTypingIndicator(recipientId, status) {
+	console.log(`Turning typing indicator ${status ? "on" : "off"}`);
 
-	var messageData = {
-		sender_action: "typing_on"
-	};
-
-	return await callSendAPI(recipientId, messageData);
-}
-
-/*
- * Turn typing indicator off
- *
- */
-async function sendTypingOff(recipientId) {
-	console.log("Turning typing indicator off");
-
-	var messageData = {
-		sender_action: "typing_off"
-	};
-
-	return await callSendAPI(recipientId, messageData);
+	return await callSendAPI(recipientId, {
+		sender_action: status ? "typing_on" : "typing_off"
+	});
 }
 
 /*
