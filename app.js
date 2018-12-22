@@ -330,7 +330,7 @@ async function sendTextMessage(recipientId, messageText) {
 				id: recipientId
 			},
 			message: {
-				text: chunk
+				text: chunks[i]
 			}
 		}));
 	}
