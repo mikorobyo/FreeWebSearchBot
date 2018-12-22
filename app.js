@@ -325,10 +325,7 @@ async function sendTextMessage(recipientId, messageText) {
 		results = [];
 
 	for(let i = 0; i < chunks.length; ++i) {
-		results.push(await callSendAPI({
-			recipient: {
-				id: recipientId
-			},
+		results.push(await callSendAPI(recipientId, {
 			message: {
 				text: chunks[i]
 			}
@@ -344,9 +341,6 @@ async function sendTextMessage(recipientId, messageText) {
  */
 async function sendQuickReply(recipientId, message, urlArray) {
 	var messageData = {
-		recipient: {
-			id: recipientId
-		},
 		message: {
 			text: message,
 			quick_replies: []
@@ -361,7 +355,7 @@ async function sendQuickReply(recipientId, message, urlArray) {
 		});
 	}
 
-	return await callSendAPI(messageData);
+	return await callSendAPI(recipientId, messageData);
 }
 
 /*
@@ -372,13 +366,10 @@ async function sendTypingOn(recipientId) {
 	console.log("Turning typing indicator on");
 
 	var messageData = {
-		recipient: {
-			id: recipientId
-		},
 		sender_action: "typing_on"
 	};
 
-	return await callSendAPI(messageData);
+	return await callSendAPI(recipientId, messageData);
 }
 
 /*
@@ -389,13 +380,10 @@ async function sendTypingOff(recipientId) {
 	console.log("Turning typing indicator off");
 
 	var messageData = {
-		recipient: {
-			id: recipientId
-		},
 		sender_action: "typing_off"
 	};
 
-	return await callSendAPI(messageData);
+	return await callSendAPI(recipientId, messageData);
 }
 
 /*
@@ -403,13 +391,17 @@ async function sendTypingOff(recipientId) {
  * get the message id in a response
  *
  */
-async function callSendAPI(messageData) {
+async function callSendAPI(recipientId, messageData) {
 	return await rp.post({
 		uri: 'https://graph.facebook.com/v2.6/me/messages',
 		qs: {
 			access_token: PAGE_ACCESS_TOKEN
 		},
-		json: messageData
+		json: Object.assign({}, messageData, {
+			recipient: {
+				id: recipientId
+			}
+		})
 	});
 }
 
