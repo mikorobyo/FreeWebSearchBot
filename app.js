@@ -20,6 +20,7 @@ const
 	express = require('express'),
 	https = require('https'),
 	request = require('request'),
+	rp = require('request-promise'),
 	sanitizeHtml = require('sanitize-html');
 
 
@@ -168,7 +169,7 @@ function verifyRequestSignature(req, res, buf) {
  * https://developers.facebook.com/docs/messenger-platform/webhook-reference/authentication
  *
  */
-function receivedAuthentication(event) {
+async function receivedAuthentication(event) {
 	var senderID = event.sender.id;
 	var recipientID = event.recipient.id;
 	var timeOfAuth = event.timestamp;
@@ -186,7 +187,7 @@ function receivedAuthentication(event) {
 
 	// When an authentication is received, we'll send a message back to the sender
 	// to let them know it was successful.
-	sendTextMessage(senderID, "Authentication successful");
+	await sendTextMessage(senderID, "Authentication successful");
 }
 
 /*
@@ -203,7 +204,7 @@ function receivedAuthentication(event) {
  * then we'll simply confirm that we've received the attachment.
  *
  */
-function receivedMessage(event) {
+async function receivedMessage(event) {
 	var senderID = event.sender.id;
 	var recipientID = event.recipient.id;
 	var timeOfMessage = event.timestamp;
@@ -224,97 +225,63 @@ function receivedMessage(event) {
 	var quickReply = message.quick_reply;
 
 	if (isEcho) {
-		// Just logging message echoes to console
-		console.log("Received echo for message %s and app %d with metadata %s",
-			messageId, appId, metadata);
+		console.log("Received echo for message %s and app %d with metadata %s", messageId, appId, metadata);
 		return;
 	} else if (quickReply) {
-		var quickReplyPayload = quickReply.payload;
-		console.log("Quick reply for message %s with payload %s",
-			messageId, quickReplyPayload);
+		console.log("Quick reply for message %s with payload %s", messageId, quickReply.payload);
 
-		httpGet(senderID, quickReplyPayload);
-
+		await sendTypingIndicator(senderID, true);
+		await httpGet(senderID, quickReply.payload);
+		await sendTypingIndicator(senderID, false);
 		return;
 	}
 
-	if (messageText) {
+	if(!messageText && messageAttachments) {
+		await sendTextMessage(senderID, "Search the Internet for free! You may also get the text contents of a website by sending us the complete http link (e.g. \"https://phmountains.com\").");
+		return;
+	}
 
-		sendTypingOn(senderID);
+	if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
+		await sendTypingIndicator(senderID, true);
+		await httpGet(senderID, messageText);
+		await sendTypingIndicator(senderID, false);
+		return;
+	}
 
-		if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
-			httpGet(senderID, messageText);
+	try {
+		await sendTypingIndicator(senderID, true);
 
+		const obj = await rp.get({
+			uri: SEARCH_URL + messageText,
+			json: true
+		});
+
+		let index = 1,
+			total = "",
+			links = [];
+
+		if(!obj.items) {
+			console.log("Googled " + messageText + ": ZERO results");
+			await sendTextMessage(senderID, "Thanks for trying out this bot. Please bear with us as we already exceeded the total daily number of searches allowable by Google (by a single app). The bot will work again at 4 p.m. Philippine time when Google resets the daily limit.\n\nIn the meantime, you may also use this as a primitive web browser. Just send a link (e.g. \"http://phmountains.com\") and the bot will respond with the text-only version of the website.");
 			return;
 		}
 
-		https.get(SEARCH_URL + messageText, (resp) => {
-			let data = '';
+		obj.items.forEach(function (item) {
+			if (index != 1) total += "\n\n";
 
-			// A chunk of data has been received.
-			resp.on('data', (chunk) => {
-				data += chunk;
-			});
-
-			// The whole response has been received. Print out the result.
-			resp.on('end', () => {
-                console.log(data);
-
-				sendTypingOff(senderID);
-
-				try {
-					var obj = JSON.parse(data);
-					//     console.log(JSON.stringify(obj.items, null, "\t"));
-					var index = 1;
-					var total = "";
-					var links = [];
-
-					if (obj.items != null) {
-						obj.items.forEach(function (item) {
-							if (index != 1) {
-								total += "\n\n";
-							}
-							total += (index++) + ". " + item.title + "\n\n" + item.snippet;
-							links.push(item.link);
-
-						});
-						console.log("Googled " + messageText + ": " + obj.items.length + " results");
-
-
-						if (total.length < 2000) { // FB single message length limit
-							sendQuickReply(senderID, total, links);
-						} else {
-							sendQuickReply(senderID, total.substring(0, 2000), links);
-
-							// TODO: manage message barrage order
-							//   	var parts = total.length / 2000;
-							//     	var i = 0
-							//     	for(; i < total.length; i += 2000){
-							//     	  sendTextMessage(senderID, total.substring(i, i+2000));
-							//     	}
-							//     	sendQuickReply(senderID, total.substring(i, total.length), links);
-						}
-
-					} else {
-					    console.log("Googled " + messageText + ": ZERO results");
-						sendTextMessage(senderID, "Thanks for trying out this bot. Please bear with us as we already exceeded the total daily number of searches allowable by Google (by a single app). The bot will work again at 4 p.m. Philippine time when Google resets the daily limit.\n\nIn the meantime, you may also use this as a primitive web browser. Just send a link (e.g. \"http://phmountains.com\") and the bot will respond with the text-only version of the website.");
-					}
-
-				} catch (e) {
-					console.err("Error: " + e.message);
-					sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
-				}
-			});
-
-		}).on("error", (err) => {
-			console.err("Error: " + err.message);
-			sendTypingOff(senderID);
-			sendTextMessage(senderID, "Error: " + err.message);
+			total += (index++) + ". " + item.title + "\n\n" + item.snippet;
+			links.push(item.link);
 		});
 
+		console.log("Googled " + messageText + ": " + obj.items.length + " results");
 
-	} else if (messageAttachments) {
-		sendTextMessage(senderID, "Search the Internet for free! You may also get the text contents of a website by sending us the complete http link (e.g. \"https://phmountains.com\").");
+		await sendTextMessage(senderID, total);
+		await sendQuickReply(senderID, "Choose a search result:", links);
+	} catch(err) {
+		console.error("Error: " + err.message);
+		await sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
+	} finally {
+		await sendTypingIndicator(senderID, false);
 	}
 }
 
@@ -322,120 +289,50 @@ function receivedMessage(event) {
  * Send a text message using the Send API.
  *
  */
-function sendTextMessage(recipientId, messageText) {
-	var messageData = {
-		recipient: {
-			id: recipientId
-		},
-		message: {
-			text: messageText,
-			metadata: "DEVELOPER_DEFINED_METADATA"
-		}
-	};
+async function sendTextMessage(recipientId, messageText) {
+	const chunks = messageText.match(/[\s\S]{1,2000}/g),
+		results = [];
 
-	callSendAPI(messageData);
+	for(let i = 0; i < chunks.length; ++i) {
+		results.push(await callSendAPI(recipientId, {
+			message: {
+				text: chunks[i]
+			}
+		}));
+	}
+
+	return results;
 }
 
 /*
  * Send a message with Quick Reply buttons.
  *
  */
-function sendQuickReply(recipientId, message, urlArray) {
+async function sendQuickReply(recipientId, message, urlArray) {
 	var messageData = {
-		recipient: {
-			id: recipientId
-		},
 		message: {
 			text: message,
-			quick_replies: [{
-					"content_type": "text",
-					"title": "1",
-					"payload": urlArray[0]
-				},
-				{
-					"content_type": "text",
-					"title": "2",
-					"payload": urlArray[1]
-				},
-				{
-					"content_type": "text",
-					"title": "3",
-					"payload": urlArray[2]
-				},
-				{
-					"content_type": "text",
-					"title": "4",
-					"payload": urlArray[3]
-				},
-				{
-					"content_type": "text",
-					"title": "5",
-					"payload": urlArray[4]
-				},
-				{
-					"content_type": "text",
-					"title": "6",
-					"payload": urlArray[5]
-				},
-				{
-					"content_type": "text",
-					"title": "7",
-					"payload": urlArray[6]
-				},
-				{
-					"content_type": "text",
-					"title": "8",
-					"payload": urlArray[7]
-				},
-				{
-					"content_type": "text",
-					"title": "9",
-					"payload": urlArray[8]
-				},
-				{
-					"content_type": "text",
-					"title": "10",
-					"payload": urlArray[9]
-				}
-			]
+			quick_replies: []
 		}
 	};
 
-	callSendAPI(messageData);
+	for(let i = 1; i <= 10; ++i) {
+		messageData.message.quick_replies.push({
+			content_type: "text",
+			title: i,
+			payload: urlArray[i - 1]
+		});
+	}
+
+	return await callSendAPI(recipientId, messageData);
 }
 
-/*
- * Turn typing indicator on
- *
- */
-function sendTypingOn(recipientId) {
-	console.log("Turning typing indicator on");
+async function sendTypingIndicator(recipientId, status) {
+	console.log(`Turning typing indicator ${status ? "on" : "off"}`);
 
-	var messageData = {
-		recipient: {
-			id: recipientId
-		},
-		sender_action: "typing_on"
-	};
-
-	callSendAPI(messageData);
-}
-
-/*
- * Turn typing indicator off
- *
- */
-function sendTypingOff(recipientId) {
-	console.log("Turning typing indicator off");
-
-	var messageData = {
-		recipient: {
-			id: recipientId
-		},
-		sender_action: "typing_off"
-	};
-
-	callSendAPI(messageData);
+	return await callSendAPI(recipientId, {
+		sender_action: status ? "typing_on" : "typing_off"
+	});
 }
 
 /*
@@ -443,41 +340,27 @@ function sendTypingOff(recipientId) {
  * get the message id in a response
  *
  */
-function callSendAPI(messageData) {
-	request({
+async function callSendAPI(recipientId, messageData) {
+	return await rp.post({
 		uri: 'https://graph.facebook.com/v2.6/me/messages',
 		qs: {
 			access_token: PAGE_ACCESS_TOKEN
 		},
-		method: 'POST',
-		json: messageData
-
-	}, function (error, response, body) {
-		if (!error && response.statusCode == 200) {
-			var recipientId = body.recipient_id;
-			var messageId = body.message_id;
-
-			if (messageId) {
-				console.log("Successfully sent message with id %s to recipient %s",
-					messageId, recipientId);
-			} else {
-				console.log("Successfully called Send API for recipient %s",
-					recipientId);
+		json: Object.assign({}, messageData, {
+			recipient: {
+				id: recipientId
 			}
-		} else {
-			console.error("Failed calling Send API", response.statusCode, response.statusMessage, body.error);
-		}
+		})
 	});
 }
 
-
-function httpGet(senderID, url) {
+async function httpGet(senderID, url) {
 	console.log("httpGet: Fetching: %s", url);
 	request({
 		uri: url,
 		method: 'GET'
 
-	}, function (error, response, body) {
+	}, async function (error, response, body) {
 		if (!error && response.statusCode == 200) {
 			console.log("httpGet: Successfully received response from: %s",
 				url);
@@ -488,30 +371,12 @@ function httpGet(senderID, url) {
 				allowedIframeHostnames: []
 			});
 
-
-			if (text.length < 2000) { // FB single message length limit
-				sendTextMessage(senderID, text);
-			} else {
-				sendTextMessage(senderID, text.substring(0, 2000));
-
-				// TODO: manage message barrage order
-				//     	var parts = text.length / 2000;
-				//     	var i = 0
-				//     	for(; i < text.length; i += 2000){
-				//     	  sendTextMessage(senderID, text.substring(i, i+2000));
-				//     	}
-				//     	sendTextMessage(senderID, text.substring(i, text.length));
-			}
-
-
+			await sendTextMessage(senderID, text);
 		} else {
-			console.error("Failed calling httpGet from: %s",
-				url);
-
+			console.error("Failed calling httpGet from: %s", url);
 		}
 	});
 }
-
 
 // Start server
 // Webhooks must be available via SSL with a certificate signed by a valid
