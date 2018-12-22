@@ -225,62 +225,63 @@ async function receivedMessage(event) {
 	var quickReply = message.quick_reply;
 
 	if (isEcho) {
-		// Just logging message echoes to console
 		console.log("Received echo for message %s and app %d with metadata %s", messageId, appId, metadata);
 		return;
 	} else if (quickReply) {
-		var quickReplyPayload = quickReply.payload;
 		console.log("Quick reply for message %s with payload %s", messageId, quickReplyPayload);
 
-		httpGet(senderID, quickReplyPayload);
-
+		await sendTypingIndicator(senderID, true);
+		await httpGet(senderID, quickReply.payload);
+		await sendTypingIndicator(senderID, false);
 		return;
 	}
 
-	if (messageText) {
+	if(!messageText && messageAttachments) {
+		await sendTextMessage(senderID, "Search the Internet for free! You may also get the text contents of a website by sending us the complete http link (e.g. \"https://phmountains.com\").");
+		return;
+	}
+
+	if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
+		await sendTypingIndicator(senderID, true);
+		await httpGet(senderID, messageText);
+		await sendTypingIndicator(senderID, false);
+		return;
+	}
+
+	try {
 		await sendTypingIndicator(senderID, true);
 
-		if (messageText.startsWith("http://") || messageText.startsWith("https://")) {
-			httpGet(senderID, messageText);
+		const obj = await rp.get({
+			uri: SEARCH_URL + messageText,
+			json: true
+		});
+
+		let index = 1,
+			total = "",
+			links = [];
+
+		if(!obj.items) {
+			console.log("Googled " + messageText + ": ZERO results");
+			await sendTextMessage(senderID, "Thanks for trying out this bot. Please bear with us as we already exceeded the total daily number of searches allowable by Google (by a single app). The bot will work again at 4 p.m. Philippine time when Google resets the daily limit.\n\nIn the meantime, you may also use this as a primitive web browser. Just send a link (e.g. \"http://phmountains.com\") and the bot will respond with the text-only version of the website.");
 			return;
 		}
 
-		try {
-			await sendTypingIndicator(senderID, true);
+		obj.items.forEach(function (item) {
+			if (index != 1) total += "\n\n";
 
-			const obj = await rp.get({
-				uri: SEARCH_URL + messageText,
-				json: true
-			});
+			total += (index++) + ". " + item.title + "\n\n" + item.snippet;
+			links.push(item.link);
+		});
 
-			let index = 1,
-				total = "",
-				links = [];
+		console.log("Googled " + messageText + ": " + obj.items.length + " results");
 
-			if(!obj.items) {
-				console.log("Googled " + messageText + ": ZERO results");
-				await sendTextMessage(senderID, "Thanks for trying out this bot. Please bear with us as we already exceeded the total daily number of searches allowable by Google (by a single app). The bot will work again at 4 p.m. Philippine time when Google resets the daily limit.\n\nIn the meantime, you may also use this as a primitive web browser. Just send a link (e.g. \"http://phmountains.com\") and the bot will respond with the text-only version of the website.");
-				return;
-			}
-
-			obj.items.forEach(function (item) {
-				if (index != 1) total += "\n\n";
-
-				total += (index++) + ". " + item.title + "\n\n" + item.snippet;
-				links.push(item.link);
-			});
-
-			console.log("Googled " + messageText + ": " + obj.items.length + " results");
-
-			await sendTextMessage(senderID, total);
-			await sendQuickReply(senderID, "Choose a search result:", links);
-		} catch(err) {
-			console.error("Error: " + err.message);
-			await sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
-			await sendTypingIndicator(senderID, false);
-		}
-	} else if (messageAttachments) {
-		await sendTextMessage(senderID, "Search the Internet for free! You may also get the text contents of a website by sending us the complete http link (e.g. \"https://phmountains.com\").");
+		await sendTextMessage(senderID, total);
+		await sendQuickReply(senderID, "Choose a search result:", links);
+	} catch(err) {
+		console.error("Error: " + err.message);
+		await sendTextMessage(senderID, "Oops! An error was encountered. Please try again.");
+	} finally {
+		await sendTypingIndicator(senderID, false);
 	}
 }
 
