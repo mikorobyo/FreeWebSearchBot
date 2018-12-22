@@ -353,7 +353,7 @@ async function sendQuickReply(recipientId, message, urlArray) {
 		}
 	};
 
-	for(i = 1; i <= 10; ++i) {
+	for(let i = 1; i <= 10; ++i) {
 		messageData.message.quick_replies.push({
 			content_type: "text",
 			title: i,
